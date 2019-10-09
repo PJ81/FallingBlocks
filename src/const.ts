@@ -12,6 +12,7 @@ export const
   START = 1,
   FILL = 2,
   FALL = 4,
+  OVER = 8,
 
   RND = (mn: number, mx: number) => {
     return Math.floor(Math.random() * (mx - mn) + mn);
