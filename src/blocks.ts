@@ -5,12 +5,14 @@ import Block from "./block.js";
 export default class Blocks {
   imgs: HTMLImageElement[];
   blocks: Block[];
+  moving: Block[];
   timer: number;
   state: number;
   count: number;
 
   constructor(img: HTMLImageElement[]) {
     this.blocks = [];
+    this.moving = [];
     for (let x = 0; x < 100; x++) {
       this.blocks.push(null);
     }
@@ -21,15 +23,42 @@ export default class Blocks {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    this.moving.forEach(el => { if (el && el.state !== Const.OUT) el.draw(ctx) });
     this.blocks.forEach(el => { if (el && el.state !== Const.OUT) el.draw(ctx) });
   }
 
   update(dt: number) {
+    this.moving.forEach((el, dx) => {
+      if (el && el.state === Const.MOVING) {
+        el.update(dt);
+        if (el.moved >= 40) {
+          const col = ~~(el.pos.x / 40),
+            row = ~~(el.pos.y / 40);
+          if (row < 10 && this.blocks[(row + 1) * 10 + col] !== null || row === 10) {
+            el.pos.y = row * 40;
+            this.blocks[(row) * 10 + col] = el.clone();
+            this.moving[dx] = null;
+            if (row === 0) {
+              this.state = Const.SHAKE;
+              this.blocks.forEach(el => { if (el) el.state = Const.SHAKE; });
+              this.timer = 1;
+            }
+          }
+        }
+      }
+    });
+
     switch (this.state) {
       case Const.SHAKE: this.updateShake(dt); break;
       case Const.FLY: this.updateFly(dt); break;
       case Const.FILL: this.updateFill(dt); break
-      case Const.FALL: this.updateFall(dt); break
+      case Const.WAIT:
+        if ((this.timer -= dt) < 0) {
+          this.count = 0;
+          this.state = Const.FILL;
+          this.updateFill(dt); break
+        }
+        break;
       case Const.START: break;
       case Const.OVER: break;
     }
@@ -47,41 +76,61 @@ export default class Blocks {
 
     const bl = this.blocks[pt.x + 10 * pt.y];
     if (bl && bl.state === Const.NONE) {
-      this.blocks[pt.x + 10 * pt.y] = null;
-      this.moveBlocks();
+      const sm = this.removeBlocks(pt, bl.type);
+      if (sm > 1) {
+        this.blocks.forEach(el => {
+          if (el) {
+            el.visited = false;
+            if (el.remove.x > -1)
+              this.blocks[el.remove.x + 10 * el.remove.y] = null;
+          }
+        });
+        this.blocks[pt.x + 10 * pt.y] = null;
+        this.moveBlocks();
+      } else {
+        this.blocks.forEach(el => {
+          if (el) {
+            el.visited = false;
+            el.remove.set(-1, -1);
+          }
+        });
+      }
     }
   }
 
-  checkBlocks() {
-    const mv = this.blocks.filter(el => el && el.state === Const.MOVING);
-    let ret = true;
-    mv.forEach((el) => {
-      if (el.moved >= 40) {
-        const col = ~~(el.pos.x / 40),
-          row = ~~(el.pos.y / 40);
-        if (row < 10 && this.blocks[(row + 1) * 10 + col] !== null || row === 10) {
-          el.pos.y = row * 40;
-          this.count--;
-          this.blocks[(row) * 10 + col] = el.clone();
-          if (row === 0) {
-            this.state = Const.SHAKE;
-            ret = false;
-            this.blocks.forEach(el => { if (el) el.state = Const.SHAKE; });
-            this.timer = 1;
-          }
-        }
-      }
-    });
-    return ret;
+  removeBlocks(pt: Point, tp: number): number {
+    if (pt.x < 0 || pt.y < 0 || pt.x > 9 || pt.y > 9) return 0;
+    const el = this.blocks[pt.x + 10 * pt.y];
+    if (!el || el.visited) return 0;
+    el.visited = true;
+    if (el.type !== tp) return 0;
+    el.remove.set(pt.x, pt.y);
+    let r = 1;
+    r += this.removeBlocks(new Point(pt.x + 1, pt.y), tp);
+    r += this.removeBlocks(new Point(pt.x - 1, pt.y), tp);
+    r += this.removeBlocks(new Point(pt.x, pt.y + 1), tp);
+    r += this.removeBlocks(new Point(pt.x, pt.y - 1), tp);
+    return r;
   }
 
   moveBlocks() {
     for (let y = 9; y > 0; y--) {
       for (let x = 0; x < 10; x++) {
-        if (!this.blocks[x + 10 * y] && this.blocks[x + 10 * (y - 1)])
-          this.blocks[x + 10 * (y - 1)].state = Const.MOVING;
+        if (!this.blocks[x + 10 * y]) {
+          let yy = y - 1;
+          while (yy > 0 && this.blocks[x + 10 * yy]) {
+            const e = this.blocks[x + 10 * yy].clone();
+            this.blocks[x + 10 * yy] = null;
+            e.state = Const.MOVING;
+            this.moving.push(e);
+            yy--;
+          }
+        }
       }
     }
+
+
+
   }
 
   updateShake(dt: number) {
@@ -114,31 +163,20 @@ export default class Blocks {
   }
 
   updateFill(dt: number) {
-    this.blocks.forEach(el => { if (el) el.update(dt) });
     if ((this.timer -= dt) < 0) {
       const nb = new Block();
       nb.type = Const.RND(0, 4);
       nb.setImage(this.imgs[nb.type], 0);
       nb.pos.set(this.count * 40, 0);
-      this.blocks[this.count] = nb;
-      this.timer = .1;
+      this.moving.push(nb);
+      this.timer = .21;
       if (++this.count === 10) {
-        this.state = Const.FALL;
-        for (let b = 0; b < 10; b++)
-          this.blocks[b].state = Const.MOVING;
+        this.state = Const.WAIT;
+        this.timer = 1;
+        this.moving.forEach(el => {
+          if (el) el.state = Const.MOVING;
+        });
       }
     }
-  }
-
-  updateFall(dt: number) {
-    let check = false;
-    this.blocks.forEach(el => {
-      if (el && el.state === Const.MOVING) {
-        el.update(dt);
-        check = true;
-      }
-    });
-    if (check) this.checkBlocks();
-    else this.state = Const.FILL;
   }
 }

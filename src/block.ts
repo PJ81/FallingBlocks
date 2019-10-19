@@ -1,19 +1,26 @@
 import Entity from "./entity.js";
 import * as Const from "./const.js";
+import Point from "./point.js";
 
 export default class Block extends Entity {
   state: number;
   moved: number;
+  remove: Point;
+  visited: Boolean;
 
   constructor() {
     super();
     this.moved = 40;
+    this.remove = new Point(-1, -1);
+    this.visited = false;
     this.state = Const.NONE;
     this.velocity.set(0, 600);
   }
 
   clone(): Block {
     const b = new Block();
+    b.type = this.type;
+    b.remove.set(this.remove.x, this.remove.y);
     b.pos.set(this.pos.x, this.pos.y);
     b.setImage(this.imgFrames[this.animFrame]);
     return b;

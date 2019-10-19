@@ -13,13 +13,14 @@ export const
   NONE = 0,
   START = 1,
   FILL = 2,
+  WAIT = 3,
   FALL = 4,
-  SHAKE = 8,
-  FLY = 16,
-  OVER = 32,
+  SHAKE = 5,
+  FLY = 6,
+  OVER = 7,
+  MOVING = 8,
+  OUT = 9,
 
-  MOVING = 64,
-  OUT = 128,
 
   RND = (mn: number, mx: number) => {
     return Math.floor(Math.random() * (mx - mn) + mn);
