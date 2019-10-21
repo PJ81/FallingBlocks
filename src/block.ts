@@ -39,6 +39,7 @@ export default class Block extends Entity {
     switch (this.state) {
       case Const.MOVING:
         const spd = this.velocity.y * dt;
+        this.velocity.y *= 1.01;
         this.pos.y += spd;
         this.moved += spd;
         break;

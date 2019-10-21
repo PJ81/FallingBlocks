@@ -1,30 +1,40 @@
 import * as Const from "./const.js";
+import Resource from "./resources.js";
 import Point from "./point.js";
 import Block from "./block.js";
+import Game from "./game.js";
 
-export default class Blocks {
-  imgs: HTMLImageElement[];
+class FallingBlocks extends Game {
+  res: Resource;
   blocks: Block[];
   moving: Block[];
   timer: number;
   state: number;
   count: number;
 
-  constructor(img: HTMLImageElement[]) {
+  constructor() {
+    super();
+    this.res = new Resource();
+    this.res.loadImages(["bs.png", "rs.png", "gs.png", "ys.png"], () => {
+      this.canvas.addEventListener("click", (e: MouseEvent) => this.click(e, null));
+      this.canvas.addEventListener("touchstart", (e: TouchEvent) => this.click(null, e));
+      this.loop();
+    });
+
     this.blocks = [];
     this.moving = [];
     for (let x = 0; x < 100; x++) {
       this.blocks.push(null);
     }
-    this.imgs = img;
+
     this.timer = .1;
     this.count = 0;
     this.state = Const.FILL;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    this.moving.forEach(el => { if (el && el.state !== Const.OUT) el.draw(ctx) });
-    this.blocks.forEach(el => { if (el && el.state !== Const.OUT) el.draw(ctx) });
+  draw() {
+    this.moving.forEach(el => { if (el && el.state !== Const.OUT) el.draw(this.ctx) });
+    this.blocks.forEach(el => { if (el && el.state !== Const.OUT) el.draw(this.ctx) });
   }
 
   update(dt: number) {
@@ -129,8 +139,17 @@ export default class Blocks {
       }
     }
 
-
-
+    for (let x = 1; x < 9; x++) {
+      if (!this.blocks[x + 90]) {
+        for (let y = 9; y > 0; y--) {
+          for (let xx = x; xx < 10; xx++) {
+            this.blocks[xx + 10 * y] = this.blocks[xx + 1 + 10 * y];
+            this.blocks[xx + 1 + 10 * y] = null;
+          }
+        }
+        x--;
+      }
+    }
   }
 
   updateShake(dt: number) {
@@ -166,7 +185,7 @@ export default class Blocks {
     if ((this.timer -= dt) < 0) {
       const nb = new Block();
       nb.type = Const.RND(0, 4);
-      nb.setImage(this.imgs[nb.type], 0);
+      nb.setImage(this.res.images[nb.type], 0);
       nb.pos.set(this.count * 40, 0);
       this.moving.push(nb);
       this.timer = .21;
@@ -180,3 +199,5 @@ export default class Blocks {
     }
   }
 }
+
+new FallingBlocks();
