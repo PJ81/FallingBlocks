@@ -18,7 +18,7 @@ export const
   SHAKE = 5,
   FLY = 6,
   OVER = 7,
-  MOVING = 8,
+  MOVE_DOWN = 8,
   OUT = 9,
 
 

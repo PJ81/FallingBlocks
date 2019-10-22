@@ -37,7 +37,7 @@ export default class Block extends Entity {
 
   update(dt: number) {
     switch (this.state) {
-      case Const.MOVING:
+      case Const.MOVE_DOWN:
         const spd = this.velocity.y * dt;
         this.velocity.y *= 1.01;
         this.pos.y += spd;

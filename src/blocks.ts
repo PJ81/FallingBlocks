@@ -38,8 +38,10 @@ class FallingBlocks extends Game {
   }
 
   update(dt: number) {
+    let f = false;
     this.moving.forEach((el, dx) => {
-      if (el && el.state === Const.MOVING) {
+      if (el && el.state === Const.MOVE_DOWN) {
+        f = true;
         el.update(dt);
         if (el.moved >= 40) {
           const col = ~~(el.pos.x / 40),
@@ -52,6 +54,28 @@ class FallingBlocks extends Game {
               this.state = Const.SHAKE;
               this.blocks.forEach(el => { if (el) el.state = Const.SHAKE; });
               this.timer = 1;
+            }
+          }
+        }
+      }
+      if (!f) {
+        let adj = false;
+        for (let x = 0; x < 9; x++) {
+          if (!this.blocks[x + 90]) {
+            for (let y = 9; y > 0; y--) {
+              for (let xx = x; xx < 9; xx++) {
+                const b = this.blocks[xx + 1 + 10 * y];
+                if (b) {
+                  this.blocks[xx + 10 * y] = b;
+                  b.pos.set(xx * 40, y * 40);
+                  this.blocks[xx + 1 + 10 * y] = null;
+                  adj = true;
+                }
+              }
+            }
+            if (adj) {
+              adj = false;
+              x--;
             }
           }
         }
@@ -96,7 +120,7 @@ class FallingBlocks extends Game {
           }
         });
         this.blocks[pt.x + 10 * pt.y] = null;
-        this.moveBlocks();
+        this.moveBlocksDown();
       } else {
         this.blocks.forEach(el => {
           if (el) {
@@ -123,7 +147,7 @@ class FallingBlocks extends Game {
     return r;
   }
 
-  moveBlocks() {
+  moveBlocksDown() {
     for (let y = 9; y > 0; y--) {
       for (let x = 0; x < 10; x++) {
         if (!this.blocks[x + 10 * y]) {
@@ -131,23 +155,11 @@ class FallingBlocks extends Game {
           while (yy > 0 && this.blocks[x + 10 * yy]) {
             const e = this.blocks[x + 10 * yy].clone();
             this.blocks[x + 10 * yy] = null;
-            e.state = Const.MOVING;
+            e.state = Const.MOVE_DOWN;
             this.moving.push(e);
             yy--;
           }
         }
-      }
-    }
-
-    for (let x = 1; x < 9; x++) {
-      if (!this.blocks[x + 90]) {
-        for (let y = 9; y > 0; y--) {
-          for (let xx = x; xx < 10; xx++) {
-            this.blocks[xx + 10 * y] = this.blocks[xx + 1 + 10 * y];
-            this.blocks[xx + 1 + 10 * y] = null;
-          }
-        }
-        x--;
       }
     }
   }
@@ -193,7 +205,7 @@ class FallingBlocks extends Game {
         this.state = Const.WAIT;
         this.timer = 1;
         this.moving.forEach(el => {
-          if (el) el.state = Const.MOVING;
+          if (el) el.state = Const.MOVE_DOWN;
         });
       }
     }
